@@ -1,0 +1,18 @@
+[project]
+name = "blog-generator"
+version = "0.1.0"
+description = "Helps you to generate a very meaningful blog"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.119.0",
+    "langchain>=0.3.27",
+    "langchain-cli[inmem]>=0.0.37",
+    "langchain-community>=0.3.31",
+    "langchain-core>=0.3.79",
+    "langchain-groq>=0.3.8",
+    "langgraph>=0.6.10",
+    "langgraph-cli[inmem]>=0.1.54",
+    "uvicorn>=0.37.0",
+    "watchdog>=6.0.0",
+]
