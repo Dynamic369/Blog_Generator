@@ -41,37 +41,73 @@ class BlogNode:
             
             return {"blog": {"title":state['blog']['title'], "content":response.content}}
         
+    # def translation(self, state:BlogState):
+    #     """
+    #     Translate the content into specified language.
+    #     """
+    #     translation_prompt = """ 
+    #                         Translate the following content into {current_language}.
+    #                         - Maintain the original tone, style, and formatting.
+    #                         - Adapt cultural references and idoms to be appropiate for {current_language}
+    #
+    #                         ORIGINAL CONTENT
+    #                         {blog_content}
+    #                         """
+    #     blog_content = state['blog']['content']
+    #     messages =[
+    #         HumanMessage(translation_prompt.format(current_language=state['current_language'], blog_content=blog_content))
+    #     ]
+    #
+    #     translation_content = self.llm.with_structured_output(Blog).invoke(messages)
+    #     return {"blog": {"content": translation_content}}
+
     def translation(self, state:BlogState):
         """
         Translate the content into specified language.
+        Always provide a title to Blog model.
         """
-        translation_prompt = """ 
-                            Translate the following content into {current_language}.
-                            - Maintain the original tone, style, and formatting.
-                            - Adapt cultural references and idoms to be appropiate for {current_language}
+        translation_prompt = """
+            Translate the following content into {current_language}.
+            - Maintain the original tone, style, and formatting.
+            - Adapt cultural references and idioms to be appropriate for {current_language}
 
-                            ORIGINAL CONTENT
-                            {blog_content}
-                            """
+            ORIGINAL CONTENT
+            {blog_content}
+        """
         blog_content = state['blog']['content']
-        messages =[
-            HumanMessage(translation_prompt.format(current_language=state['current_language'], blog_content=blog_content))
+        messages = [
+            HumanMessage(translation_prompt.format(
+                current_language=state['current_language'],
+                blog_content=blog_content
+            ))
         ]
-
-        translation_content = self.llm.with_structured_output(Blog).invoke(messages)
-        return {"blog": {"content": translation_content}}
+        raw = self.llm.invoke(messages)
+        # Extract only title/content fields
+        original_title = state['blog'].get('title', '')
+        if isinstance(raw, dict):
+            filtered = {k: raw[k] for k in ['title', 'content'] if k in raw}
+        else:
+            filtered = {"content": str(raw)}
+        # Always provide a title
+        if 'title' not in filtered or not filtered['title']:
+            filtered['title'] = original_title
+        blog_obj = Blog(**filtered)
+        return {"blog": {"title": blog_obj.title, "content": blog_obj.content}}
     
     
     def route(self, state:BlogState):
         return {"current_language":state['current_language']}
     
-    def route_decision(self,state:BlogState):
+
+    def route_decision(self, state:BlogState):
         """
         Route the content to the respective translation function.
+        Only allow mapped languages, fallback to 'french'.
         """
-        if state["current_language"] == "hindi":
+        lang = state.get("current_language", "french")
+        if lang == "hindi":
             return "hindi"
-        elif state["current_language"] == "french": 
+        if lang == "french":
             return "french"
-        else:
-            return state['current_language']
+        # fallback branch so the graph doesn't error for other languages
+        return "french"
